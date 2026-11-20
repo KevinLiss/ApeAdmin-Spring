@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.apeadmin</groupId>
+    <artifactId>ape-framework</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>ape-framework-redis</artifactId>
+  <packaging>jar</packaging>
+  <name>ApeAdmin :: Framework :: Redis</name>
+  <description>M5 多实例占位：RedisUtils 门面（当前不启用自动装配）</description>
+</project>

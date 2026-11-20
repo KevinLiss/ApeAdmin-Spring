@@ -1,0 +1,29 @@
+# ---- build ----
+target/
+*.class
+*.jar
+!.mvn/wrapper/*.jar
+
+# ---- ide ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# ---- runtime state（不入库）----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+setup.lock
+.env
+keys/
+uploads/
+logs/
+frontend/
+
+# ---- 本地资产（文档与调研，不入库）----
+*.html
+调研/
+.temp/
+Apeadmin-Spring/

@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:./apeadmin_spring.db?journal_mode=WAL&busy_timeout=5000&foreign_keys=on
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 4
+      connection-init-sql: "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;"

@@ -1,0 +1,31 @@
+package com.apeadmin.framework.mybatis;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * DO 基类：主键 + 审计字段（自动填充）+ 逻辑删除。
+ */
+@Data
+public abstract class BaseDO implements Serializable {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+
+    @TableLogic
+    @TableField(select = false)
+    private Integer deleted;
+}

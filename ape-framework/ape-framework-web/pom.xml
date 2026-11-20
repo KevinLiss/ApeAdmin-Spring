@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.apeadmin</groupId>
+    <artifactId>ape-framework</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>ape-framework-web</artifactId>
+  <packaging>jar</packaging>
+  <name>ApeAdmin :: Framework :: Web</name>
+  <description>统一响应/全局异常/脱敏注解/SSE 辅助/静态托管</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- 全局异常层需识别 sa-token 鉴权异常（NotLoginException 等），仅引核心包，不引 starter -->
+    <dependency>
+      <groupId>cn.dev33</groupId>
+      <artifactId>sa-token-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+</project>

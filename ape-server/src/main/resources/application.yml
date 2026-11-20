@@ -1,0 +1,55 @@
+server:
+  port: 18080
+  servlet:
+    encoding: { charset: UTF-8, force: true }
+
+spring:
+  application:
+    name: apeadmin-spring
+  threads:
+    virtual:
+      enabled: true
+  profiles:
+    active: sqlite
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+    # 全局 snake_case：对齐 Python 版前后端契约（前端请求/响应均为下划线风格，
+    # 如菜单 parent_id、用户 role_ids、登录 access_token；对已是下划线的字段无副作用）
+    property-naming-strategy: SNAKE_CASE
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  is-concurrent: true
+  is-share: false
+  is-read-cookie: false
+  timeout: 86400
+  active-timeout: -1
+  is-logout: true
+  is-print: false
+  jwt-secret-key: ${APE_JWT_SECRET:apeadmin-dev-secret-change-me-in-prod-2026}
+
+logging:
+  level:
+    root: INFO
+    com.apeadmin: DEBUG
+    com.baomidou.mybatisplus: WARN
