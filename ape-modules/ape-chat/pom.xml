@@ -24,6 +24,12 @@
       <groupId>com.apeadmin</groupId>
       <artifactId>ape-framework-mybatis</artifactId>
     </dependency>
+    <!-- M2：系统工具(get_user_list 等)执行需访问 system 模块 mappers（chat 为上层功能，单向依赖无循环） -->
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-system</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
