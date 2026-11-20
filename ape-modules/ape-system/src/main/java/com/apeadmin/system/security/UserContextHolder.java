@@ -45,4 +45,14 @@ public final class UserContextHolder {
         Object v = StpUtil.getExtra("deptId");
         return v == null ? null : Long.valueOf(v.toString());
     }
+
+    /** 当前用户名；无上下文返回 null（后台线程审计用，不抛异常）。 */
+    public static String peekUsername() {
+        try {
+            LoginUser u = get();
+            return u == null ? null : u.username();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

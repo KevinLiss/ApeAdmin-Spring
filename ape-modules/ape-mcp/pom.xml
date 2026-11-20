@@ -20,5 +20,20 @@
       <groupId>com.apeadmin</groupId>
       <artifactId>ape-common</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-framework-mybatis</artifactId>
+    </dependency>
+    <!-- M3：内置工具(role/dept/menu CRUD)需访问 system 模块 mappers（单向依赖无循环） -->
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-system</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 </project>

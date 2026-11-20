@@ -30,6 +30,12 @@
       <artifactId>ape-system</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!-- M3：AI Agent 工具面合并 MCP 注册表（chat → mcp 单向） -->
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-mcp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>

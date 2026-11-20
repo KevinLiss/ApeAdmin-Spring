@@ -2,6 +2,8 @@ package com.apeadmin.chat.agent;
 
 import com.apeadmin.common.constant.PermConst;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.apeadmin.mcp.McpManager;
+import com.apeadmin.mcp.McpService;
 import com.apeadmin.system.domain.SysDept;
 import com.apeadmin.system.domain.SysMenu;
 import com.apeadmin.system.domain.SysRole;
@@ -29,6 +31,9 @@ import java.util.Set;
  *
  * <p>每个工具暴露给 LLM 作 function-calling；执行时按当前用户 RBAC 权限校验
  * （工具名 → 所需权限映射）。返回值为 JSON 字符串（LLM tool 消息 content）。
+ *
+ * <p>M3：合并 MCP 注册表工具——定义合并进 toolDefinitions，执行回退到 McpManager
+ * （需 mcp:tools:call 权限，AI 触发的调用同路写审计）。
  */
 @Slf4j
 @Component
@@ -44,6 +49,8 @@ public class SystemTools {
     private final SysRelationMapper relationMapper;
     private final PermissionService permissionService;
     private final PasswordEncoder encoder;
+    private final McpManager mcpManager;   // 可选依赖：M3 合并 MCP 工具
+    private final McpService mcpService;
 
     /** LLM function-calling 工具定义（OpenAI 兼容格式）。 */
     public List<Map<String, Object>> toolDefinitions() {
@@ -79,6 +86,20 @@ public class SystemTools {
         defs.add(tool("get_system_stats", "获取系统统计信息：用户总数、角色总数、菜单总数、部门总数。",
                 props(),
                 null));
+        // M3：合并 MCP 注册表工具（AI 可调用 role/dept/menu CRUD、system_health_check 等）
+        try {
+            for (McpManager.Tool t : mcpManager.listTools(null)) {
+                Map<String, Object> fn = new LinkedHashMap<>();
+                fn.put("name", t.getName());
+                fn.put("description", t.getDescription() == null || t.getDescription().isBlank()
+                        ? "MCP 工具: " + t.getName() : t.getDescription());
+                fn.put("parameters", t.getInputSchema() == null || t.getInputSchema().isEmpty()
+                        ? Map.of("type", "object", "properties", Map.of()) : t.getInputSchema());
+                defs.add(Map.of("type", "function", "function", fn));
+            }
+        } catch (Exception e) {
+            log.warn("MCP 工具合并失败（降级为纯系统工具）: {}", e.getMessage());
+        }
         return defs;
     }
 
@@ -91,12 +112,26 @@ public class SystemTools {
             "delete_user", List.of(PermConst.USER_DELETE),
             "get_system_stats", List.of());
 
-    /** 权限校验（超管 "*" 通配）。 */
+    /** 权限校验（超管 "*" 通配；MCP 工具由 requiredPermissions 判定）。 */
     public boolean checkPermission(String toolName, Long userId) {
         Set<String> perms = permissionService.permissionsOf(userId);
         for (String need : PERMISSIONS.getOrDefault(toolName, List.of())) {
             if (!perms.contains("*") && !perms.contains(need)) {
                 return false;
+            }
+        }
+        // MCP 工具：需 mcp:tools:call 且工具自身 requiredPermissions 任一命中
+        McpManager.Tool mcpTool = mcpManager.getTool(toolName);
+        if (mcpTool != null) {
+            if (!perms.contains("*") && !perms.contains(PermConst.MCP_TOOLS_CALL)) {
+                return false;
+            }
+            if (!mcpTool.getRequiredPermissions().isEmpty()) {
+                boolean any = perms.contains("*")
+                        || mcpTool.getRequiredPermissions().stream().anyMatch(perms::contains);
+                if (!any) {
+                    return false;
+                }
             }
         }
         return true;
@@ -121,9 +156,9 @@ public class SystemTools {
                 case "update_user" -> updateUser(userId, num(args.get("user_id")), args);
                 case "delete_user" -> deleteUser(userId, num(args.get("user_id")));
                 case "get_system_stats" -> getSystemStats();
-                default -> Map.of("error", "未知工具: " + toolName);
+                default -> executeMcp(toolName, argumentsJson, userId);   // M3 回退：MCP 注册表
             };
-            return JSON.writeValueAsString(result);
+            return result instanceof String s ? s : JSON.writeValueAsString(result);
         } catch (Exception e) {
             log.warn("工具 {} 执行失败: {}", toolName, e.getMessage());
             Map<String, Object> err = new LinkedHashMap<>();
@@ -133,6 +168,28 @@ public class SystemTools {
             } catch (Exception ignore) {
                 return "{\"error\":\"工具执行失败\"}";
             }
+        }
+    }
+
+    /** MCP 工具执行（同路写审计）。返回 JSON 字符串。 */
+    private String executeMcp(String toolName, String argumentsJson, Long userId) {
+        McpManager.Tool t = mcpManager.getTool(toolName);
+        if (t == null) {
+            return "{\"error\":\"未知工具: " + toolName + "\"}";
+        }
+        String username = null;
+        try {
+            username = com.apeadmin.system.security.UserContextHolder.peekUsername();
+        } catch (Exception ignore) {
+            // 后台 worker 线程无上下文
+        }
+        try {
+            String result = mcpManager.callTool(toolName, argumentsJson, userId);
+            mcpService.writeAudit("tool", toolName, userId, username, null, result, "ok");
+            return result;
+        } catch (Exception e) {
+            mcpService.writeAudit("tool", toolName, userId, username, null, null, "failed");
+            return "{\"error\":\"MCP 工具执行失败: " + e.getMessage() + "\"}";
         }
     }
 
