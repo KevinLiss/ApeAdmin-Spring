@@ -30,6 +30,10 @@
     </dependency>
     <dependency>
       <groupId>com.apeadmin</groupId>
+      <artifactId>ape-plugin</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
       <artifactId>ape-framework-web</artifactId>
     </dependency>
     <dependency>

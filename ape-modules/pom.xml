@@ -18,5 +18,6 @@
     <module>ape-system</module>
     <module>ape-chat</module>
     <module>ape-mcp</module>
+    <module>ape-plugin</module>
   </modules>
 </project>

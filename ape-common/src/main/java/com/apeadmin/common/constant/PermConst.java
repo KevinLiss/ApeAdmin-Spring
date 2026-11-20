@@ -32,6 +32,12 @@ public final class PermConst {
     public static final String SETTING_EDIT = "system:setting:edit";
     // 文件
     public static final String FILE_LIST = "system:file:list";
+    public static final String FILE_UPLOAD = "system:file:upload";
+    public static final String FILE_CREATE_FOLDER = "system:file:create-folder";
+    public static final String FILE_RENAME = "system:file:rename";
+    public static final String FILE_MOVE = "system:file:move";
+    public static final String FILE_DELETE = "system:file:delete";
+    public static final String FILE_DOWNLOAD = "system:file:download";
     // 日志
     public static final String LOG_LIST = "system:log:list";
     public static final String LOG_DELETE = "system:log:delete";

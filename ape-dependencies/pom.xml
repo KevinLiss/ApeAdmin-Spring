@@ -116,6 +116,11 @@
         <artifactId>ape-mcp</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.apeadmin</groupId>
+        <artifactId>ape-plugin</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>

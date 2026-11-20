@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.apeadmin</groupId>
+    <artifactId>ape-modules</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>ape-plugin</artifactId>
+  <packaging>jar</packaging>
+  <name>ApeAdmin :: Module :: Plugin</name>
+  <description>三级插件体系：L1 静态注册 / L2 ZIP 热加载 / L3 MCP 外挂（含插件管理 API）</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-framework-mybatis</artifactId>
+    </dependency>
+    <!-- 插件注册 MCP 工具 + 菜单 seed 访问 system mappers -->
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-system</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.apeadmin</groupId>
+      <artifactId>ape-mcp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+</project>

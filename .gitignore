@@ -19,6 +19,7 @@ setup.lock
 .env
 keys/
 uploads/
+plugins/
 logs/
 frontend/
 
