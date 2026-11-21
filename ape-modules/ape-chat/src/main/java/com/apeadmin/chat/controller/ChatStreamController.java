@@ -36,6 +36,7 @@ public class ChatStreamController {
 
     private final AiAgentService agent;
     private final ProviderService providerService;
+    private final com.apeadmin.chat.service.ChatQuotaService chatQuotaService;
 
     @Data
     public static class ChatMessageReq {
@@ -58,6 +59,7 @@ public class ChatStreamController {
     @PostMapping("/stream")
     public StreamingResponseBody stream(@RequestBody ChatReq body) {
         var ctx = UserContextHolder.require();
+        chatQuotaService.check(ctx.id());
         AiProviderDO provider = providerService.resolve(body.getProvider_id());
         List<Map<String, Object>> history = new ArrayList<>();
         for (ChatMessageReq m : body.getMessages() == null ? List.<ChatMessageReq>of() : body.getMessages()) {
@@ -110,6 +112,7 @@ public class ChatStreamController {
     @PostMapping
     public R<Object> chat(@RequestBody ChatReq body) {
         var ctx = UserContextHolder.require();
+        chatQuotaService.check(ctx.id());
         AiProviderDO provider = providerService.resolve(body.getProvider_id());
         List<Map<String, Object>> history = new ArrayList<>();
         for (ChatMessageReq m : body.getMessages() == null ? List.<ChatMessageReq>of() : body.getMessages()) {

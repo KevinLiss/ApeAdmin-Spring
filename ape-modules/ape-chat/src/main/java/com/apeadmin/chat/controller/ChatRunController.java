@@ -52,6 +52,7 @@ public class ChatRunController {
     private final ChatSessionMapper sessionMapper;
     private final SessionService sessionService;
     private final ProviderService providerService;
+    private final com.apeadmin.chat.service.ChatQuotaService chatQuotaService;
 
     @Data
     public static class RunCreateReq {
@@ -62,17 +63,11 @@ public class ChatRunController {
         private Boolean enable_tools;
     }
 
-    /** 每用户每日调用上限（内存计数；0=不限制）。 */
-    @org.springframework.beans.factory.annotation.Value("${ape.chat.daily-limit:100}")
-    private long dailyLimit;
-
-    private final java.util.Map<Long, java.util.Map<String, Long>> dailyUsage = new java.util.concurrent.ConcurrentHashMap<>();
-
     @SaCheckLogin
     @PostMapping
     public R<Map<String, Object>> create(@RequestBody RunCreateReq body) {
         var ctx = UserContextHolder.require();
-        checkQuota(ctx.id());
+        chatQuotaService.check(ctx.id());
         if (body.getQuestion() == null || body.getQuestion().isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "问题不能为空");
         }
@@ -171,26 +166,5 @@ public class ChatRunController {
             throw new BizException(ErrorCode.NOT_FOUND, "运行不存在");
         }
         return run;
-    }
-
-    private void checkQuota(Long userId) {
-        if (dailyLimit <= 0) {
-            return;
-        }
-        String today = java.time.LocalDate.now().toString().replace("-", "");
-        java.util.Map<String, Long> entry = dailyUsage.computeIfAbsent(userId, k -> {
-            java.util.Map<String, Long> m = new java.util.concurrent.ConcurrentHashMap<>();
-            m.put("date", 0L);
-            m.put("count", 0L);
-            return m;
-        });
-        if (entry.get("date") != Long.parseLong(today)) {
-            entry.put("date", Long.parseLong(today));
-            entry.put("count", 0L);
-        }
-        if (entry.get("count") >= dailyLimit) {
-            throw new BizException(ErrorCode.TOO_MANY_ATTEMPTS, "今日调用已达上限（" + dailyLimit + " 次）");
-        }
-        entry.merge("count", 1L, Long::sum);
     }
 }

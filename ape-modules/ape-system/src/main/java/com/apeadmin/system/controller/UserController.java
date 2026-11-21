@@ -109,6 +109,19 @@ public class UserController {
         return R.ok(null, "重置成功");
     }
 
+    /**
+     * 对齐 Python 版契约：PUT /users/{id}/reset-password?new_password=xxx
+     * （前端 Wve 直接 query 传新密码，无 body）。
+     */
+    @OperateLog(action = "重置密码", module = "用户管理")
+    @SaCheckPermission(PermConst.USER_RESET_PASSWORD)
+    @PutMapping("/{id}/reset-password")
+    public R<Void> resetPasswordQuery(@PathVariable Long id,
+                                      @RequestParam("new_password") String newPassword) {
+        userService.resetPassword(id, newPassword);
+        return R.ok(null, "重置成功");
+    }
+
     @Data
     public static class PasswordBody {
         private String password;
