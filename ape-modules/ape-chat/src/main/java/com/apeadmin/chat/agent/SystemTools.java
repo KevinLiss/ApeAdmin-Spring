@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 系统工具注册表（6 工具，对齐 Python 版 SYSTEM_TOOLS）。
@@ -51,6 +52,26 @@ public class SystemTools {
     private final PasswordEncoder encoder;
     private final McpManager mcpManager;   // 可选依赖：M3 合并 MCP 工具
     private final McpService mcpService;
+
+    /**
+     * LLM function name 安全映射（safeName → 真实 MCP 工具名）。
+     *
+     * <p>OpenAI 兼容接口（DeepSeek 等）要求 function.name 匹配 {@code ^[a-zA-Z0-9_-]+$}，
+     * MCP 规范允许任意字符（插件工具如 {@code calc_ext:calc_add} 含冒号）——直接透传会被
+     * 模型接口 400 拒绝。此处向下发（toolDefinitions）用 safe 名，向上回传（checkPermission/execute）
+     * 再映射回真实名。
+     */
+    private final Map<String, String> safeToReal = new ConcurrentHashMap<>();
+
+    /** 工具名规范化：将非 [a-zA-Z0-9_-] 字符替换为下划线。 */
+    private static String safeName(String name) {
+        return name == null ? "" : name.replaceAll("[^a-zA-Z0-9_-]", "_");
+    }
+
+    /** 将 LLM 回传的工具名还原为真实注册名（无映射时原样返回）。 */
+    public String realToolName(String toolName) {
+        return safeToReal.getOrDefault(toolName, toolName);
+    }
 
     /** LLM function-calling 工具定义（OpenAI 兼容格式）。 */
     public List<Map<String, Object>> toolDefinitions() {
@@ -89,8 +110,10 @@ public class SystemTools {
         // M3：合并 MCP 注册表工具（AI 可调用 role/dept/menu CRUD、system_health_check 等）
         try {
             for (McpManager.Tool t : mcpManager.listTools(null)) {
+                String safe = safeName(t.getName());
+                safeToReal.put(safe, t.getName());
                 Map<String, Object> fn = new LinkedHashMap<>();
-                fn.put("name", t.getName());
+                fn.put("name", safe);
                 fn.put("description", t.getDescription() == null || t.getDescription().isBlank()
                         ? "MCP 工具: " + t.getName() : t.getDescription());
                 fn.put("parameters", t.getInputSchema() == null || t.getInputSchema().isEmpty()
@@ -114,6 +137,7 @@ public class SystemTools {
 
     /** 权限校验（超管 "*" 通配；MCP 工具由 requiredPermissions 判定）。 */
     public boolean checkPermission(String toolName, Long userId) {
+        toolName = realToolName(toolName);
         Set<String> perms = permissionService.permissionsOf(userId);
         for (String need : PERMISSIONS.getOrDefault(toolName, List.of())) {
             if (!perms.contains("*") && !perms.contains(need)) {
@@ -140,6 +164,7 @@ public class SystemTools {
     /** 执行工具，返回 JSON 字符串（LLM tool 消息 content）。 */
     @SuppressWarnings("unchecked")
     public String execute(String toolName, String argumentsJson, Long userId) {
+        toolName = realToolName(toolName);
         Map<String, Object> args = new LinkedHashMap<>();
         try {
             if (argumentsJson != null && !argumentsJson.isBlank()) {

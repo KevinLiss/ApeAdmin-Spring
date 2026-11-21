@@ -60,16 +60,28 @@ public class PluginController {
 
     @SaCheckPermission(PermConst.PLUGIN_TOGGLE)
     @PutMapping("/{id}/toggle")
-    public R<Map<String, Object>> toggle(@PathVariable Long id) {
+    public R<Map<String, Object>> toggle(@PathVariable Long id,
+                                         @RequestBody(required = false) ToggleReq body) {
         String name = manager.nameOf(id);
         try {
-            Map<String, Object> result = manager.isEnabled(id) ? manager.disable(name) : manager.enable(name);
-            return R.ok(result, manager.isEnabled(id) ? "插件已启用" : "插件已停用");
+            // 对齐 Python 版语义：body.enabled 为显式目标值（幂等 set）；
+            // 缺省 body 时退化为 flip（兼容旧调用）。
+            boolean target = body != null && body.enabled() != null
+                    ? body.enabled()
+                    : !manager.isEnabled(id);
+            Map<String, Object> result = target ? manager.enable(name) : manager.disable(name);
+            Map<String, Object> data = new java.util.LinkedHashMap<>(result);
+            data.put("refresh", true);   // 前端据此刷新列表
+            return R.ok(data, target ? "插件已启用" : "插件已停用");
         } catch (IllegalArgumentException e) {
             throw new BizException(ErrorCode.NOT_FOUND, e.getMessage());
         } catch (Exception e) {
             throw new BizException(ErrorCode.INTERNAL_ERROR, "插件切换失败: " + e.getMessage());
         }
+    }
+
+    /** 前端 toggle body：{enabled: true|false}（显式目标值，幂等）。 */
+    public record ToggleReq(Boolean enabled) {
     }
 
     @SaCheckPermission(PermConst.PLUGIN_CONFIG)

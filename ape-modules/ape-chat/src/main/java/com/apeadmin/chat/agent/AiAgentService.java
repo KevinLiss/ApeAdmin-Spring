@@ -141,22 +141,24 @@ public class AiAgentService {
                 } catch (Exception ignore) {
                     // 参数解析失败按空参
                 }
-                emitter.accept(new ToolCallEvent(tc.name(), args));
+                // 事件/审计用真实工具名（LLM 下发的是 safe 名，如 calc_ext_calc_add）
+                String realName = tools.realToolName(tc.name());
+                emitter.accept(new ToolCallEvent(realName, args));
 
-                if (!tools.checkPermission(tc.name(), userId)) {
-                    String denied = "{\"error\":\"权限不足，需要 " + String.join(",", permOf(tc.name())) + "\"}";
-                    emitter.accept(new ToolResultEvent(tc.name(), Map.of("error", "权限不足")));
+                if (!tools.checkPermission(realName, userId)) {
+                    String denied = "{\"error\":\"权限不足，需要 " + String.join(",", permOf(realName)) + "\"}";
+                    emitter.accept(new ToolResultEvent(realName, Map.of("error", "权限不足")));
                     llmMessages.add(Map.of("role", "tool", "tool_call_id", tc.id(), "content", denied));
                     continue;
                 }
-                String resultJson = tools.execute(tc.name(), tc.arguments(), userId);
+                String resultJson = tools.execute(realName, tc.arguments(), userId);
                 Object resultObj;
                 try {
                     resultObj = new com.fasterxml.jackson.databind.ObjectMapper().readValue(resultJson, Object.class);
                 } catch (Exception ignore) {
                     resultObj = resultJson;
                 }
-                emitter.accept(new ToolResultEvent(tc.name(), resultObj));
+                emitter.accept(new ToolResultEvent(realName, resultObj));
                 llmMessages.add(Map.of("role", "tool", "tool_call_id", tc.id(), "content", resultJson));
             }
             // 继续下一轮（LLM 总结工具结果）

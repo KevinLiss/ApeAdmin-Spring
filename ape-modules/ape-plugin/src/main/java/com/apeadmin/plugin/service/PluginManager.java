@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
+import java.time.LocalDateTime;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -193,6 +194,8 @@ public class PluginManager implements ApplicationRunner {
         row.setDescription(description == null ? "MCP 外挂（stdio JSON-RPC）" : description);
         row.setEnabled(0);
         row.setConfig(serializeConfig(config));
+        row.setCreatedAt(LocalDateTime.now());
+        row.setUpdatedAt(LocalDateTime.now());
         pluginMapper.insert(row);
         log.info("L3 外挂注册: {}", name);
         return Map.of("name", name, "level", "L3", "enabled", 0);
@@ -376,7 +379,9 @@ public class PluginManager implements ApplicationRunner {
         if (row.getConfig() == null) {
             row.setConfig("{}");
         }
+        row.setUpdatedAt(LocalDateTime.now());
         if (existing.isEmpty()) {
+            row.setCreatedAt(LocalDateTime.now());
             pluginMapper.insert(row);
         } else {
             pluginMapper.updateById(row);
@@ -402,7 +407,9 @@ public class PluginManager implements ApplicationRunner {
         m.put("author", p.getAuthor());
         m.put("module_path", p.getModulePath());
         m.put("level", p.getLevel());
-        m.put("enabled", p.getEnabled());
+        m.put("enabled", p.getEnabled() != null && p.getEnabled() == 1);  // 对齐 Python bool 契约（前端 el-switch 需 boolean）
+        m.put("created_at", p.getCreatedAt() == null ? null : p.getCreatedAt().toString());
+        m.put("updated_at", p.getUpdatedAt() == null ? null : p.getUpdatedAt().toString());
         m.put("config", configOf(p.getName()));
         m.put("runtime_state", runtimeStates.getOrDefault(p.getName(),
                 p.getEnabled() != null && p.getEnabled() == 1 ? "active" : "inactive"));
