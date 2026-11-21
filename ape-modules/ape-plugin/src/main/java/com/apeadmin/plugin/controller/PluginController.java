@@ -167,7 +167,10 @@ public class PluginController {
             }
             System.exit(restartExitCode);
         });
-        return R.ok(Map.of("restarted", true), "正在重启");
+        return R.ok(Map.of(
+                "restarted", true,
+                // 前端重启等待（pollBackendHealth）依赖 old_pid 判定新进程拉起
+                "old_pid", ProcessHandle.current().pid()), "正在重启");
     }
 
     @SaCheckLogin

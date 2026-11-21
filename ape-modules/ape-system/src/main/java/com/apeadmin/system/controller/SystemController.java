@@ -83,7 +83,11 @@ public class SystemController {
         return R.ok(m);
     }
 
-    /** 对比 ApeHub 最新发布（失败降级，不抛错）。 */
+    /** 对比 ApeHub 最新发布（失败降级，不抛错）。
+     *
+     * <p>注：ApeHub 发布接口的 framework 参数目前只认 python / go（传 java 返回 422），
+     * 故改为不带参数拉取后在本地过滤 framework=java 的条目；暂无可达的 Java 发布时
+     * 以 reachable=true + has_update=false 返回（前端仅据此控制横幅）。 */
     @SaCheckPermission(PermConst.VERSION_VIEW)
     @GetMapping("/check-update")
     public R<Map<String, Object>> checkUpdate() {
@@ -94,27 +98,36 @@ public class SystemController {
         try {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(apehubBase.replaceAll("/$", "")
-                            + "/api/v1/apehub-web/site/public/releases?framework=java"))
+                            + "/api/v1/apehub-web/site/public/releases"))
                     .timeout(Duration.ofSeconds(6))
                     .GET().build();
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode body = JSON.readTree(resp.body());
             JsonNode items = body.path("data").path("items");
             if (items.isArray() && !items.isEmpty()) {
-                JsonNode latest = items.get(0);
-                String latestVersion = latest.path("version").asText("");
+                JsonNode latest = null;
+                for (JsonNode item : items) {
+                    if ("java".equalsIgnoreCase(item.path("framework").asText(""))) {
+                        latest = item;   // items 按发布时间倒序，首个 java 即最新
+                        break;
+                    }
+                }
                 result.put("reachable", true);
-                result.put("latest_version", latestVersion);
-                result.put("release_id", latest.path("id").asLong());
-                result.put("title", latest.path("title").asText(null));
-                result.put("changelog", latest.path("changelog").asText(null));
-                result.put("published_at", latest.path("published_at").asText(null));
-                result.put("download_url", latest.path("id").asLong() > 0
-                        ? apehubBase.replaceAll("/$", "")
-                                + "/api/v1/apehub-web/site/public/releases/"
-                                + latest.path("id").asLong() + "/download"
-                        : null);
-                result.put("has_update", compareSemver(latestVersion, appVersion) > 0);
+                if (latest != null) {
+                    String latestVersion = latest.path("version").asText("");
+                    long releaseId = latest.path("id").asLong();
+                    result.put("latest_version", latestVersion);
+                    result.put("release_id", releaseId);
+                    result.put("title", latest.path("title").asText(null));
+                    result.put("changelog", latest.path("changelog").asText(null));
+                    result.put("published_at", latest.path("published_at").asText(null));
+                    result.put("download_url", releaseId > 0
+                            ? apehubBase.replaceAll("/$", "")
+                                    + "/api/v1/apehub-web/site/public/releases/"
+                                    + releaseId + "/download"
+                            : null);
+                    result.put("has_update", compareSemver(latestVersion, appVersion) > 0);
+                }
             }
         } catch (Exception e) {
             log.warn("check-update 失败（降级为不可达）: {}", e.getMessage());
@@ -178,7 +191,12 @@ public class SystemController {
             return R.ok(Map.of(
                     "sha256", sha256,
                     "backup", backup.getFileName().toString(),
-                    "restarted", restartExitCode >= 0), "更新完成");
+                    "restarted", restartExitCode >= 0,
+                    // 前端重启等待（pollBackendHealth）依赖 old_pid 判定新进程拉起
+                    "old_pid", ProcessHandle.current().pid(),
+                    "message", restartExitCode >= 0
+                            ? "更新完成，等待守护脚本拉起新版本"
+                            : "更新完成（本环境未启用自动重启，请手动重启服务）"), "更新完成");
         } catch (IllegalArgumentException e) {
             throw new BizException(ErrorCode.BAD_REQUEST, e.getMessage());
         } finally {
