@@ -28,3 +28,6 @@ frontend/
 调研/
 .temp/
 Apeadmin-Spring/
+
+# 发布构建产物（zip/sha256/staging 目录）不入库
+release/dist/

@@ -17,6 +17,7 @@
     <mybatis-plus.version>3.5.18.1</mybatis-plus.version>
     <sqlite-jdbc.version>3.53.2.1</sqlite-jdbc.version>
     <flyway.version>12.4.0</flyway.version>
+    <oshi.version>6.9.1</oshi.version>
   </properties>
 
   <dependencyManagement>
@@ -120,6 +121,12 @@
         <groupId>com.apeadmin</groupId>
         <artifactId>ape-plugin</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <!-- OSHI：跨平台硬件/系统监控（仪表盘 CPU/内存/磁盘/网络采集，纯 Java 免装依赖） -->
+      <dependency>
+        <groupId>com.github.oshi</groupId>
+        <artifactId>oshi-core</artifactId>
+        <version>${oshi.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
