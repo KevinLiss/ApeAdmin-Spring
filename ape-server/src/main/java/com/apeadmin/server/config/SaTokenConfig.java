@@ -24,6 +24,12 @@ public class SaTokenConfig {
     @Value("${APE_JWT_SECRET:apeadmin-dev-secret-change-me-in-prod-2026}")
     private String jwtSecret;
 
+    private final javax.sql.DataSource dataSource;
+
+    public SaTokenConfig(javax.sql.DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     /** 全局配置（代码声明，@Primary 优先于 starter 从 yml 绑定的默认 Bean）。 */
     @Bean
     @org.springframework.context.annotation.Primary
@@ -42,10 +48,10 @@ public class SaTokenConfig {
         return cfg;
     }
 
-    /** 会话存储 Dao：显式单实例（修 login 写入与校验读取实例分裂问题；M5 换 Redis Dao 实现）。 */
+    /** 会话存储 Dao：SQLite 持久化（登录态跨重启保留；M5 如上 Redis 再替换）。 */
     @Bean
-    public cn.dev33.satoken.dao.SaTokenDao saTokenDao() {
-        return new cn.dev33.satoken.dao.SaTokenDaoDefaultImpl();
+    public cn.dev33.satoken.dao.SaTokenDao saTokenDao(javax.sql.DataSource dataSource) {
+        return new SaTokenDaoSqlite(dataSource);
     }
 
     /** JWT-Simple：JWT 形态 token，映射仍写 Dao → 踢人下线/黑名单全语义可用。 */
@@ -61,6 +67,15 @@ public class SaTokenConfig {
     public void forceInit() {
         // 二次保险：确保 SaManager 全局配置为本进程唯一配置
         cn.dev33.satoken.SaManager.setConfig(saTokenGlobalConfig());
+        // 二次保险：SB4 下 starter 的 Dao Bean 收集不稳定，显式接管持久化 Dao
+        cn.dev33.satoken.SaManager.setSaTokenDao(new SaTokenDaoSqlite(dataSource));
+        // 二次保险：core 内置 JSON 模板全部 NotImpl，hutool 模板支撑 Dao 的 Object/Session 层
+        cn.dev33.satoken.SaManager.setSaJsonTemplate(new SaJsonTemplateHutool());
+    }
+
+    @Bean
+    public cn.dev33.satoken.json.SaJsonTemplate saJsonTemplate() {
+        return new SaJsonTemplateHutool();
     }
 
     @Bean
