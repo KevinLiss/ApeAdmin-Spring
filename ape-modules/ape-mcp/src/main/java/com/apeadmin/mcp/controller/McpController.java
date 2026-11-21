@@ -105,7 +105,7 @@ public class McpController {
             String result = manager.callTool(body.getName(),
                     serialize(body.getArguments()), ctx.id());
             service.writeAudit("tool", body.getName(), ctx.id(), ctx.username(),
-                    body.getArguments(), result, "ok");
+                    body.getArguments(), result, "success");
             return R.ok(Map.of("result", result));
         } catch (java.util.concurrent.TimeoutException e) {
             service.writeAudit("tool", body.getName(), ctx.id(), ctx.username(),
@@ -142,7 +142,7 @@ public class McpController {
         try {
             String content = manager.readResource(uri);
             service.writeAudit("resource", uri, ctx.id(), ctx.username(), null,
-                    content, "ok");
+                    content, "success");
             return R.ok(Map.of("uri", uri, "content", content));
         } catch (IllegalArgumentException e) {
             service.writeAudit("resource", uri, ctx.id(), ctx.username(), null, null, "failed");
@@ -173,7 +173,7 @@ public class McpController {
         try {
             String rendered = manager.renderPrompt(body.getName(), body.getArguments());
             service.writeAudit("prompt", body.getName(), ctx.id(), ctx.username(),
-                    body.getArguments(), rendered, "ok");
+                    body.getArguments(), rendered, "success");
             return R.ok(Map.of("rendered", rendered));
         } catch (IllegalArgumentException e) {
             service.writeAudit("prompt", body.getName(), ctx.id(), ctx.username(),

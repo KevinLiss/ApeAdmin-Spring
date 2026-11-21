@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.Map;
 public class McpService implements McpManager.McpPersistence {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final com.apeadmin.mcp.mapper.McpToolMapper toolMapper;
     private final com.apeadmin.mcp.mapper.McpAuditMapper auditMapper;
@@ -77,7 +80,10 @@ public class McpService implements McpManager.McpPersistence {
             logRow.setUsername(username);
             logRow.setArguments(truncate(serialize(arguments)));
             logRow.setResultPreview(truncate(serialize(result)));
-            logRow.setStatus(status);
+            // Python 契约：success/failed；创建时间落库（表无默认值）
+            logRow.setStatus("success".equals(status) || "failed".equals(status) ? status : "success");
+            logRow.setCreatedAt(LocalDateTime.now());
+            logRow.setUpdatedAt(LocalDateTime.now());
             auditMapper.insert(logRow);
         } catch (Exception e) {
             log.warn("MCP 审计写入失败: {}", e.getMessage());
@@ -106,7 +112,7 @@ public class McpService implements McpManager.McpPersistence {
             m.put("status", r.getStatus());
             m.put("user_id", r.getUserId());
             m.put("username", r.getUsername());
-            m.put("created_at", r.getCreatedAt() == null ? null : r.getCreatedAt().toString());
+            m.put("created_at", r.getCreatedAt() == null ? null : DT.format(r.getCreatedAt()));
             items.add(m);
         }
         Map<String, Object> out = new LinkedHashMap<>();

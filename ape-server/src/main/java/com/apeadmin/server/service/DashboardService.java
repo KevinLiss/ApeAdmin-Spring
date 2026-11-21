@@ -47,6 +47,7 @@ import java.util.Map;
 public class DashboardService {
 
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -276,10 +277,24 @@ public class DashboardService {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", t.getName());
             m.put("description", t.getDescription());
-            m.put("required_permissions", t.getRequiredPermissions());
+            // 数据库中为 JSON 文本，需反序列化为数组，否则前端会把字符串按字符逐个渲染
+            m.put("required_permissions", parsePermissions(t.getRequiredPermissions()));
             tools.add(m);
         }
         return tools;
+    }
+
+    /** 把 sys_mcp_tool.required_permissions 的 JSON 文本解析为列表（对齐 Python 版 list[str]）。 */
+    private static List<String> parsePermissions(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        try {
+            return JSON.readValue(raw, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {
+            });
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private List<Map<String, Object>> onlineUsers() {

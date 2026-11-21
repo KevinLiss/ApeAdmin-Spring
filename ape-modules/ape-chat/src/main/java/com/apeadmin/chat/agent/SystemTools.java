@@ -210,7 +210,7 @@ public class SystemTools {
         }
         try {
             String result = mcpManager.callTool(toolName, argumentsJson, userId);
-            mcpService.writeAudit("tool", toolName, userId, username, null, result, "ok");
+            mcpService.writeAudit("tool", toolName, userId, username, null, result, "success");
             return result;
         } catch (Exception e) {
             mcpService.writeAudit("tool", toolName, userId, username, null, null, "failed");
