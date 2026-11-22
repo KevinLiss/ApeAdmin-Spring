@@ -1,5 +1,6 @@
 <div align="center">
   <br/>
+  <img src="assets/logo.png" width="130" alt="ApeAdmin Logo" />
   <h1>ApeAdmin-Spring</h1>
   <p> ApeAdmin 的 Java 实现版 · Spring Boot 3 + Vue3 · 100%开源后台管理框架</p>
 </div>
@@ -246,6 +247,31 @@ apeadmin-spring/
 | OpenAI | gpt-4o-mini | `https://api.openai.com/v1` |
 | 自定义 | — | 任意 OpenAI 兼容端点 |
 
+## 系统截图
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/login.png" alt="系统仪表盘" /><br/>
+      <sub><b>系统仪表盘</b></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/dashboard.png" alt="插件管理" /><br/>
+      <sub><b>插件管理</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/plugins.png" alt="菜单管理" /><br/>
+      <sub><b>菜单管理</b></sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/system.png" alt="MCP 管理" /><br/>
+      <sub><b>MCP 管理 · 工具列表</b></sub>
+    </td>
+  </tr>
+</table>
+
 ## 贡献指南
 
 欢迎贡献！
@@ -282,4 +308,10 @@ apeadmin-spring/
 
 ## 社区交流
 
-用微信扫描二维码联系作者加入 ApeAdmin 用户群，反馈问题、分享使用心得（二维码见 [ApeAdmin 主仓库](https://github.com/KevinLiss/ApeAdmin)），或通过 [apehub 官网](http://apehub.finecv.cn/apehub-web) 与仓库 Issue 和我们联系。
+---
+
+用微信扫描下方二维码联系作者加入 ApeAdmin 用户群，反馈问题、分享使用心得，和其他用户、维护者一起交流：
+
+<p align="center">
+  <img src="assets/wechat-group-qr.png" alt="微信用户群二维码" width="220">
+</p>
