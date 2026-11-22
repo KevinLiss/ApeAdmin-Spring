@@ -63,8 +63,14 @@ public class DashboardService {
     private final VirtualMemory swap;
     private final OperatingSystem os;
     private long[] prevTicks;
+    /** 上次 CPU ticks 采样时间（ms）；0 表示尚未采样。 */
+    private volatile long lastTicksTs;
     // 网络速率计算缓存：[lastSent, lastRecv, lastTs]
     private volatile long[] lastNet = new long[]{0, 0, 0};
+    /** 主机名启动时解析一次。运行期反复调 InetAddress.getLocalHost() 会在 macOS 上
+     * 周期性触发 5s 的 mDNS 解析超时（DNS 缓存过期后重解析 .local 域名），
+     * 实测仪表盘接口每 ~15 次请求出现一次 5.3s 尖峰，均由此导致。 */
+    private final String hostname;
 
     public DashboardService(SysUserMapper userMapper, SysRoleMapper roleMapper,
                             SysMenuMapper menuMapper, SysDeptMapper deptMapper,
@@ -84,6 +90,13 @@ public class DashboardService {
         this.swap = hal.getMemory().getVirtualMemory();
         this.os = si.getOperatingSystem();
         this.prevTicks = cpu.getSystemCpuLoadTicks();
+        String h;
+        try {
+            h = InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            h = "unknown";
+        }
+        this.hostname = h;
     }
 
     // ---------------- stats ----------------
@@ -179,15 +192,21 @@ public class DashboardService {
     private Map<String, Object> collectSystemInfo() {
         Map<String, Object> data = new LinkedHashMap<>();
 
-        // CPU：两次 ticks 差值采样（约 250ms，与 psutil interval 语义一致）
-        try {
-            Thread.sleep(250);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        // CPU：两次 ticks 差值采样。轮询场景（前端 5s 一次）直接复用上次请求的
+        // ticks（等价 psutil interval=None，窗口更长反而更平滑）；仅当上一次采样
+        // 过旧（>10s，如冷启动首查）才短暂 sleep(250ms) 保证样本窗口。
+        long nowTs = System.currentTimeMillis();
+        if (lastTicksTs == 0 || nowTs - lastTicksTs > 10_000) {
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         long[] ticks = cpu.getSystemCpuLoadTicks();
         double cpuLoad = cpu.getSystemCpuLoadBetweenTicks(prevTicks);
         prevTicks = ticks;
+        lastTicksTs = nowTs;
         double[] loadAvg = cpu.getSystemLoadAverage(3);
         Map<String, Object> cpuMap = new LinkedHashMap<>();
         cpuMap.put("percent", round1(cpuLoad * 100));
@@ -236,15 +255,15 @@ public class DashboardService {
                 // 单网卡失效不阻断
             }
         }
-        long now = System.currentTimeMillis();
+        long netTs = System.currentTimeMillis();
         long[] last = lastNet;
         double sentRate = 0, recvRate = 0;
-        if (last[2] > 0 && now > last[2] && sent >= last[0] && recv >= last[1]) {
-            double sec = (now - last[2]) / 1000.0;
+        if (last[2] > 0 && netTs > last[2] && sent >= last[0] && recv >= last[1]) {
+            double sec = (netTs - last[2]) / 1000.0;
             sentRate = (sent - last[0]) / sec;
             recvRate = (recv - last[1]) / sec;
         }
-        lastNet = new long[]{sent, recv, now};
+        lastNet = new long[]{sent, recv, netTs};
         Map<String, Object> netMap = new LinkedHashMap<>();
         netMap.put("bytes_sent", sent);
         netMap.put("bytes_recv", recv);
@@ -254,13 +273,7 @@ public class DashboardService {
         netMap.put("recv_rate", round1(recvRate));
         data.put("network", netMap);
 
-        // 系统信息
-        String hostname;
-        try {
-            hostname = InetAddress.getLocalHost().getHostName();
-        } catch (Exception e) {
-            hostname = "unknown";
-        }
+        // 系统信息（主机名用启动时缓存，避免运行期 DNS 阻塞）
         Map<String, Object> sysMap = new LinkedHashMap<>();
         sysMap.put("hostname", hostname);
         sysMap.put("os", os.getFamily() + " " + os.getVersionInfo().getVersion());

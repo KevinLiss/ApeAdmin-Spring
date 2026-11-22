@@ -62,7 +62,12 @@ public class PluginController {
     @PutMapping("/{id}/toggle")
     public R<Map<String, Object>> toggle(@PathVariable Long id,
                                          @RequestBody(required = false) ToggleReq body) {
-        String name = manager.nameOf(id);
+        String name;
+        try {
+            name = manager.nameOf(id);
+        } catch (IllegalArgumentException e) {
+            throw new BizException(ErrorCode.NOT_FOUND, e.getMessage());
+        }
         try {
             // 对齐 Python 版语义：body.enabled 为显式目标值（幂等 set）；
             // 缺省 body 时退化为 flip（兼容旧调用）。
@@ -87,7 +92,11 @@ public class PluginController {
     @SaCheckPermission(PermConst.PLUGIN_CONFIG)
     @GetMapping("/{id}/config")
     public R<Object> getConfig(@PathVariable Long id) {
-        return R.ok(manager.configOf(manager.nameOf(id)));
+        try {
+            return R.ok(manager.configOf(manager.nameOf(id)));
+        } catch (IllegalArgumentException e) {
+            throw new BizException(ErrorCode.NOT_FOUND, e.getMessage());
+        }
     }
 
     @SaCheckPermission(PermConst.PLUGIN_CONFIG)
@@ -112,11 +121,18 @@ public class PluginController {
             temp = Files.createTempFile("apeadmin-plugin-", ".zip");
             file.transferTo(temp);
             Map<String, Object> result = manager.installZip(temp);
-            return R.ok(result, "插件安装成功（未启用）");
+            // 对齐 Python 版：安装成功后自动启用（plugin.py 在 upsert 后置 enabled=True）
+            String name = String.valueOf(result.get("name"));
+            Map<String, Object> enabled = manager.enable(name);
+            Map<String, Object> data = new java.util.LinkedHashMap<>(result);
+            data.put("enabled", true);
+            data.put("tools", enabled.get("tools"));
+            return R.ok(data, "插件安装成功");
         } catch (IllegalArgumentException e) {
             throw new BizException(ErrorCode.BAD_REQUEST, e.getMessage());
         } catch (Exception e) {
-            throw new BizException(ErrorCode.INTERNAL_ERROR, "插件安装失败: " + e.getMessage());
+            // 对齐 Python 版语义：安装失败属可预期的校验/包体问题 → 400 而非 500
+            throw new BizException(ErrorCode.BAD_REQUEST, "插件安装失败: " + e.getMessage());
         } finally {
             if (temp != null) {
                 try {

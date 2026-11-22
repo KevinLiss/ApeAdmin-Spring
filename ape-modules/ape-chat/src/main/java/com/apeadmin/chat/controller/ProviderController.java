@@ -1,6 +1,8 @@
 package com.apeadmin.chat.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.apeadmin.common.api.BizException;
+import com.apeadmin.common.api.ErrorCode;
 import com.apeadmin.common.api.R;
 import com.apeadmin.common.constant.PermConst;
 import com.apeadmin.chat.service.ProviderService;
@@ -58,6 +60,12 @@ public class ProviderController {
     @SaCheckPermission(PermConst.PROVIDER_ADD)
     @PostMapping
     public R<Map<String, Object>> create(@RequestBody ProviderReq body) {
+        if (body == null || body.getName() == null || body.getName().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "供应商名称不能为空");
+        }
+        if (body.getProvider_type() == null || body.getProvider_type().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "供应商类型 provider_type 不能为空");
+        }
         Long id = providerService.create(body.getName(), body.getProvider_type(), body.getBase_url(),
                 body.getApi_key(), body.getModels(), body.getEnabled(), body.getSort(), body.getRemark(),
                 body.getHeaders());

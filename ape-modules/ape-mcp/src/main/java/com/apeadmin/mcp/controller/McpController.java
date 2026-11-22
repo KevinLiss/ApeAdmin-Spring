@@ -89,6 +89,9 @@ public class McpController {
     @PostMapping("/tools/call")
     public R<Map<String, Object>> callTool(@RequestBody CallToolReq body) {
         var ctx = UserContextHolder.require();
+        if (body == null || body.getName() == null || body.getName().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具名 name 不能为空");
+        }
         var permissions = permissionService.permissionsOf(ctx.id());
 
         // 工具存在性 / 可见性（区分不存在与无权限）
@@ -170,6 +173,9 @@ public class McpController {
     @PostMapping("/prompts/render")
     public R<Map<String, Object>> renderPrompt(@RequestBody RenderPromptReq body) {
         var ctx = UserContextHolder.require();
+        if (body == null || body.getName() == null || body.getName().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "提示词名 name 不能为空");
+        }
         try {
             String rendered = manager.renderPrompt(body.getName(), body.getArguments());
             service.writeAudit("prompt", body.getName(), ctx.id(), ctx.username(),

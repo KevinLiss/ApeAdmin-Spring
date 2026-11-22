@@ -13,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 全局异常处理：BizException → R 包封；校验异常 → 400；兜底 → 500（日志含堆栈，响应不含）。
@@ -68,6 +69,46 @@ public class GlobalExceptionHandler {
                 e instanceof NotPermissionException npe
                         ? "无权限：" + npe.getPermission()
                         : "无权限：缺少角色 " + ((NotRoleException) e).getRole()));
+    }
+
+    /** 路径/查询参数类型不匹配（如前端把 undefined 当 id 传入）→ 400，而非兜底 500。 */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<R<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        String name = e.getParameter().getParameterName();
+        log.warn("参数类型不匹配: {}={}", name, e.getValue());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(R.fail(ErrorCode.BAD_REQUEST, "参数 " + name + " 格式不正确: " + e.getValue()));
+    }
+
+    /** 请求体 JSON 非法/缺失 → 400，而非兜底 500。 */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<R<Void>> handleUnreadable(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        log.warn("请求体解析失败: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(R.fail(ErrorCode.BAD_REQUEST, "请求体格式不正确"));
+    }
+
+    /** 必填参数缺失（query/form）→ 400，而非兜底 500。 */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<R<Void>> handleMissingParam(org.springframework.web.bind.MissingServletRequestParameterException e) {
+        log.warn("缺少必填参数: {}", e.getParameterName());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(R.fail(ErrorCode.BAD_REQUEST, "缺少必填参数: " + e.getParameterName()));
+    }
+
+    /** multipart 请求非法/缺失（未带 multipart Content-Type 等）→ 400。 */
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<R<Void>> handleMultipart(org.springframework.web.multipart.MultipartException e) {
+        log.warn("multipart 请求非法: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(R.fail(ErrorCode.BAD_REQUEST, "请使用 multipart/form-data 上传文件"));
+    }
+
+    /** multipart 缺文件 → 400。 */
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<R<Void>> handleMissingPart(org.springframework.web.multipart.support.MissingServletRequestPartException e) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(R.fail(ErrorCode.BAD_REQUEST, "缺少必填的文件字段: " + e.getRequestPartName()));
     }
 
     @ExceptionHandler(Exception.class)
