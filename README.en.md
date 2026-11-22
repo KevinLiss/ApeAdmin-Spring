@@ -303,13 +303,6 @@ Contributions are welcome!
 - APIs follow RESTful style with the `/api/v1` prefix and snake_case fields
 - Make sure `mvn clean package` passes before committing
 
-## Release History
-
-| Version | Date | Highlights |
-|------|------|------|
-| v1.0.1 | 2026-11-21 | Contract-alignment polish: self-update/restart flow, plugin-management interactions, MCP audit and dashboard fully aligned with the Python contracts; AI tool names sanitized for DeepSeek; Sa-Token sessions persisted to SQLite; menu/department tree selectors, real 401 status codes and other fixes |
-| v1.0.0 | 2026-11-20 | First release: M1 base skeleton & RBAC → M2 AI chat (SSE streaming + Run engine) → M3 MCP gateway → three-level plugin system + file management → M4 dashboard & release pipeline → M5 frontend contract endpoints |
-
 ## Community
 
 ---
