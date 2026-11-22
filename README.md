@@ -16,6 +16,10 @@
 </p>
 
 <p align="center">
+  简体中文 | <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/version-1.0.1-blue" alt="version">
   <img src="https://img.shields.io/badge/java-21-orange" alt="java">
   <img src="https://img.shields.io/badge/spring%20boot-3.5-brightgreen" alt="spring boot">
