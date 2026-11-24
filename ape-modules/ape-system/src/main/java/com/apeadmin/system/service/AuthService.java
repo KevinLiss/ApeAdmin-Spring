@@ -137,12 +137,16 @@ public class AuthService {
     private String[] issueTokens(SysUser user) {
         DataScope scope = widestScope(user.getId());
         String access = StpUtil.stpLogic.createLoginSession(user.getId(), new SaLoginModel()
+                .setDeviceType("PC")      // 按端区分在线用户（仪表盘/在线列表可展示设备）
+                .setMaxLoginCount(10)     // 同账号同设备最多 10 个并发会话，超限挤掉最旧
                 .setExtra("username", user.getUsername())
                 .setExtra("nickname", user.getNickname())
                 .setExtra("superAdmin", user.getIsSuperAdmin() != null && user.getIsSuperAdmin() == 1)
                 .setExtra("deptId", user.getDeptId())
                 .setExtra("dataScope", scope.code()));
-        String refresh = refreshLogic.createLoginSession(user.getId(), new SaLoginModel().setTimeout(604800));
+        String refresh = refreshLogic.createLoginSession(user.getId(), new SaLoginModel()
+                .setDeviceType("REFRESH")
+                .setTimeout(604800));
         return new String[]{access, refresh};
     }
 

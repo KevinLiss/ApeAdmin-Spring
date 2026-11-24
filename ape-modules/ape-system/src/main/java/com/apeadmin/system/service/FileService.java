@@ -137,7 +137,8 @@ public class FileService {
                         .like(SysFile::getOriginName, keyword))
                 .orderByDesc(SysFile::getId);
         long total = fileMapper.selectCount(q);
-        List<SysFile> rows = fileMapper.selectList(q.last("LIMIT " + pageSize + " OFFSET " + ((page - 1) * pageSize)));
+        long safePageSize = Math.min(Math.max(pageSize, 1), 100);  // 单页上限：防超大 pageSize 全表拉取
+        List<SysFile> rows = fileMapper.selectList(q.last("LIMIT " + safePageSize + " OFFSET " + ((page - 1) * safePageSize)));
         List<Map<String, Object>> items = new ArrayList<>();
         for (SysFile f : rows) {
             items.add(fileOut(f));

@@ -41,6 +41,10 @@ public class AiAgentService {
             """;
 
     private static final int MAX_TOOL_ROUNDS = 5;
+    /** 护栏（对齐 spring-ai DefaultToolCallingManager 思路，规格缩小）：总调用 ≤30、单工具 ≤10；
+     *  超限时不再执行而是回填一条提示结果，让模型自行收尾，不炸流。 */
+    private static final int MAX_TOTAL_TOOL_CALLS = 30;
+    private static final int MAX_CALLS_PER_TOOL = 10;
 
     private final OpenAiCompatClient llm;
     private final SystemTools tools;
@@ -88,6 +92,8 @@ public class AiAgentService {
         for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
             final StringBuilder collectedContent = new StringBuilder();
             final List<StreamListener.ToolCall>[] collectedCalls = new List[]{null};
+            final int[] totalCalls = {0};
+            final java.util.Map<String, Integer> perToolCalls = new java.util.HashMap<>();
 
             llm.streamChat(modelName, llmMessages, apiKey, baseUrl, provider.getHeaders(),
                     0.7, 2000, toolDefs, new StreamListener() {
@@ -143,6 +149,19 @@ public class AiAgentService {
                 }
                 // 事件/审计用真实工具名（LLM 下发的是 safe 名，如 calc_ext_calc_add）
                 String realName = tools.realToolName(tc.name());
+
+                // 护栏：总调用/单工具超限时不执行，回填提示让模型自行总结（对齐 spring-ai 超限转 generation 语义）
+                totalCalls[0]++;
+                int single = perToolCalls.merge(realName, 1, Integer::sum);
+                if (totalCalls[0] > MAX_TOTAL_TOOL_CALLS || single > MAX_CALLS_PER_TOOL) {
+                    String guarded = "{\"error\":\"工具调用已达上限（"
+                            + MAX_TOTAL_TOOL_CALLS + " 次/轮或 " + MAX_CALLS_PER_TOOL + " 次/工具），请基于已有结果直接回答\"}";
+                    emitter.accept(new ToolResultEvent(realName, Map.of("error", "工具调用已达上限")));
+                    llmMessages.add(Map.of("role", "tool", "tool_call_id", tc.id(), "content", guarded));
+                    log.warn("工具调用触发护栏: total={} single[{}]={}", totalCalls[0], realName, single);
+                    continue;
+                }
+
                 emitter.accept(new ToolCallEvent(realName, args));
 
                 if (!tools.checkPermission(realName, userId)) {

@@ -20,7 +20,9 @@ import java.util.List;
  *
  * <p>实现方式：继承 SaTokenDaoByObjectFollowString，只需实现 6 个 String 级方法 + searchData；
  * Object/Session 层由 sa-token 默认链路经 JSON 序列化自动转换（与官方 Redis Dao 同构）。
- * 过期行懒删除：get/getTimeout 命中过期数据时顺手 DELETE，无需后台清理线程。
+ * 过期行：懒删除（get 命中过期时顺手 DELETE）+ 周期性兜底清理（purgeExpired，
+ * 覆盖「从不单独 get」的 key，避免 sa_token_store 只增不减）。
+ * timeout 契约对齐官方 Redis Dao：timeout==0 或 <= NOT_VALUE_EXPIRE(-2) 时不存储。
  */
 public class SaTokenDaoSqlite implements SaTokenDaoByObjectFollowString {
 
@@ -28,6 +30,20 @@ public class SaTokenDaoSqlite implements SaTokenDaoByObjectFollowString {
 
     public SaTokenDaoSqlite(DataSource dataSource) {
         this.dataSource = dataSource;
+        purgeExpired();  // 启动时先清一遍历史残留
+    }
+
+    /** 兜底清理：删除已过期行（NEVER_EXPIRE(-1) 永不过期行不受影响）；每 5 分钟一次。 */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 300_000, initialDelay = 60_000)
+    public int purgeExpired() {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "DELETE FROM sa_token_store WHERE expire_at >= 0 AND expire_at < ?")) {
+            ps.setLong(1, System.currentTimeMillis() / 1000);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            return 0;
+        }
     }
 
     // ==================== String 层（token 映射 / refresh 令牌核心读写） ====================
@@ -51,6 +67,10 @@ public class SaTokenDaoSqlite implements SaTokenDaoByObjectFollowString {
 
     @Override
     public void set(String key, String value, long timeout) {
+        // 官方契约对齐：timeout==0 或 <= NOT_VALUE_EXPIRE(-2) 时不存储（此前 -2 会被误当「永不过期」落库）
+        if (timeout == SaTokenDao.NOT_VALUE_EXPIRE || timeout == 0) {
+            return;
+        }
         long expireAt = toExpireAt(timeout);
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -111,7 +131,10 @@ public class SaTokenDaoSqlite implements SaTokenDaoByObjectFollowString {
 
     @Override
     public void updateTimeout(String key, long timeout) {
-        // 契约：改过期时间不动 value；key 不存在时无效
+        // 契约：改过期时间不动 value；key 不存在时无效；0 / <=NOT_VALUE_EXPIRE 时不动（官方语义）
+        if (timeout == SaTokenDao.NOT_VALUE_EXPIRE || timeout == 0) {
+            return;
+        }
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
                      "UPDATE sa_token_store SET expire_at = ? WHERE key = ?")) {

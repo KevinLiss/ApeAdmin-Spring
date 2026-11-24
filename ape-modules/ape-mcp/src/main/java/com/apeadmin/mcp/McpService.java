@@ -99,8 +99,10 @@ public class McpService implements McpManager.McpPersistence {
                         .or().like(McpAuditDO::getUsername, keyword))
                 .orderByDesc(McpAuditDO::getId);
         long total = auditMapper.selectCount(q);
+        // 单页上限 100：防超大 pageSize 全表拉取（内存放大攻击面）
+        long safePageSize = Math.min(Math.max(pageSize, 1), 100);
         List<McpAuditDO> rows = auditMapper.selectList(q
-                .last("LIMIT " + pageSize + " OFFSET " + ((page - 1) * pageSize)));
+                .last("LIMIT " + safePageSize + " OFFSET " + ((page - 1) * safePageSize)));
         List<Map<String, Object>> items = new ArrayList<>();
         for (McpAuditDO r : rows) {
             Map<String, Object> m = new LinkedHashMap<>();

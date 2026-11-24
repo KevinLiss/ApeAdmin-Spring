@@ -54,9 +54,10 @@ public class RoleController {
     public R<Map<String, Object>> list(@RequestParam(defaultValue = "1") long page,
                                        @RequestParam(defaultValue = "20") long pageSize) {
         long total = roleMapper.selectCount(null);
+        long safePageSize = Math.min(Math.max(pageSize, 1), 100);  // 单页上限：防超大 pageSize 全表拉取
         List<Map<String, Object>> items = roleMapper.selectList(Wrappers.<SysRole>lambdaQuery()
                         .orderByAsc(SysRole::getSort)
-                        .last("LIMIT " + pageSize + " OFFSET " + (page - 1) * pageSize)).stream()
+                        .last("LIMIT " + safePageSize + " OFFSET " + (page - 1) * safePageSize)).stream()
                 .map(r -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", r.getId());

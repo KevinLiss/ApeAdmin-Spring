@@ -148,11 +148,24 @@ public class McpManager {
         return out;
     }
 
-    /** 执行工具（超时保护）。返回 JSON 字符串。 */
+    /** 执行工具（超时保护 + 入口 schema 校验）。返回 JSON 字符串。 */
     public String callTool(String name, String argumentsJson, Long userId) throws Exception {
         Tool t = tools.get(name);
         if (t == null) {
             throw new IllegalArgumentException("未知 MCP 工具: " + name);
+        }
+        // 入口 schema 校验：required 必填 + properties 基本类型（坏参数执行前拦截，
+        // 对照 mcp-java-sdk 的服务端 JsonSchemaValidator 姿势）
+        try {
+            Map<String, Object> args = argumentsJson == null || argumentsJson.isBlank()
+                    ? Map.of() : new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readValue(argumentsJson, Map.class);
+            String err = JsonSchemaValidator.validate(t.getInputSchema(), args);
+            if (err != null) {
+                throw new IllegalArgumentException("参数校验失败: " + err);
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException("参数不是合法 JSON 对象");
         }
         var future = java.util.concurrent.CompletableFuture.supplyAsync(
                 () -> t.getHandler().apply(argumentsJson == null ? "{}" : argumentsJson, userId));

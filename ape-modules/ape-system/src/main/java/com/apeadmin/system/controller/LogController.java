@@ -58,9 +58,10 @@ public class LogController {
             wrapper.eq("status_code", statusCode);
         }
         long total = logMapper.selectCount(wrapper);
+        long safePageSize = Math.min(Math.max(pageSize, 1), 100);  // 单页上限：防超大 pageSize 全表拉取
         List<Map<String, Object>> items = logMapper.selectList(wrapper
                         .orderByDesc("id")
-                        .last("LIMIT " + pageSize + " OFFSET " + (page - 1) * pageSize)).stream()
+                        .last("LIMIT " + safePageSize + " OFFSET " + (page - 1) * safePageSize)).stream()
                 .map(LogController::toDict).toList();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);

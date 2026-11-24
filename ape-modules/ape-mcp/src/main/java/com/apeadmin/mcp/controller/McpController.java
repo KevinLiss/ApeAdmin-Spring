@@ -110,6 +110,11 @@ public class McpController {
             service.writeAudit("tool", body.getName(), ctx.id(), ctx.username(),
                     body.getArguments(), result, "success");
             return R.ok(Map.of("result", result));
+        } catch (IllegalArgumentException e) {
+            // 参数校验失败（schema 拦截 / 坏参数）→ 400 而非 500
+            service.writeAudit("tool", body.getName(), ctx.id(), ctx.username(),
+                    body.getArguments(), null, "failed");
+            throw new BizException(ErrorCode.BAD_REQUEST, e.getMessage());
         } catch (java.util.concurrent.TimeoutException e) {
             service.writeAudit("tool", body.getName(), ctx.id(), ctx.username(),
                     body.getArguments(), null, "failed");

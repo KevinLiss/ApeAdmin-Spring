@@ -37,7 +37,10 @@ public class FrameworkMybatisAutoConfiguration {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new DataPermissionInterceptor(
                 new ApeDataPermissionHandler(provider)));
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.SQLITE));
+        PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.SQLITE);
+        // 单页上限 200：防 page_size=999999 全表拉取（内存放大攻击面）
+        pagination.setMaxLimit(200L);
+        interceptor.addInnerInterceptor(pagination);
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }

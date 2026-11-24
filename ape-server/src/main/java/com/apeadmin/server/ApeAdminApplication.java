@@ -9,12 +9,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * ApeAdmin-Spring 启动入口。
  * 虚拟线程由 spring.threads.virtual.enabled=true 全局开启（SSE/异步/Run worker）。
  */
 @EnableAsync
+@EnableScheduling
 @SpringBootApplication(scanBasePackages = "com.apeadmin")
 @ConfigurationPropertiesScan(basePackages = "com.apeadmin")
 @MapperScan("com.apeadmin.**.mapper")
